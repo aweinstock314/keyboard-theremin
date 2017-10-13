@@ -79,7 +79,7 @@ fn main() {
                     let freqmod = 5.0*(theremin_pos.0 / (width as f64)) + 0.5;
                     let lfo_f: Box<Fn(f64, f64) -> f64 + Send + 'static> = match lfo {
                         LFOType::Constant => Box::new(|x, _| x),
-                        LFOType::Wave(f) => Box::new(move |x, t| x*f(freqmod*t)),
+                        LFOType::Wave(f) => Box::new(move |x, t| x*f(5.0*ampmod*t)),
                     };
                     match event {
                         glutin::WindowEvent::Closed => closed = true,
@@ -89,14 +89,14 @@ fn main() {
                         glutin::WindowEvent::ReceivedCharacter('1') => lfo = LFOType::Constant,
                         glutin::WindowEvent::ReceivedCharacter('2') => lfo = LFOType::Wave(f64::sin),
 
-                        glutin::WindowEvent::ReceivedCharacter('a') => play_note(0, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('s') => play_note(1, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('d') => play_note(2, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('f') => play_note(3, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('g') => play_note(4, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('h') => play_note(5, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('j') => play_note(6, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
-                        glutin::WindowEvent::ReceivedCharacter('k') => play_note(7, ampmod*70.0, freqmod*1382.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('a') => play_note(0, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('s') => play_note(1, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('d') => play_note(2, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('f') => play_note(3, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('g') => play_note(4, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('h') => play_note(5, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('j') => play_note(6, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
+                        glutin::WindowEvent::ReceivedCharacter('k') => play_note(7, ampmod*70.0, freqmod*700.0, f64::sin, lfo_f),
 
                         glutin::WindowEvent::ReceivedCharacter('q') => play_note(0, ampmod*150.0, freqmod*700.0, square, lfo_f),
                         glutin::WindowEvent::ReceivedCharacter('w') => play_note(1, ampmod*150.0, freqmod*700.0, square, lfo_f),

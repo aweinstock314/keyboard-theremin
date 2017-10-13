@@ -10,11 +10,19 @@ use std::thread;
 
 const NOTES: [f64; 8] = [0.0, 2.0, 4.0, 5.0, 7.0, 9.0, 11.0, 12.0];
 
+fn square(x: f64) -> f64 {
+    if x.fract() < 0.5 { 1.0 } else { 0.0 }
+}
+
+fn triangle(x: f64) -> f64 {
+    (x.fract()-0.5).abs()
+}
+
 fn main() {
     //let mut p = Command::new("strace").args(&["aplay", "-c", "2", "-f", "S32_LE", "-r", "16000"]).stdin(Stdio::piped()).spawn().unwrap();
     //let mut p = Command::new("xxd").stdin(Stdio::piped()).spawn().unwrap();
     //let mut p = Command::new("cat").stdin(Stdio::piped()).spawn().unwrap();
-    let play_note = |n: usize| {
+    let play_note = |n: usize, amplitude: f64, freq: f64, wave: fn(f64) -> f64| {
         thread::spawn(move || {
             // It seems that aplay labels things backwards, and requires S32_BE to play stuff written with LittleEndian
             let p = Command::new("aplay")
@@ -28,7 +36,7 @@ fn main() {
                     let mut i = 0.0;
                     while i < 1.0 {
                         let mut tmp = [0u8; 4];
-                        LittleEndian::write_i32(&mut tmp, (100.0*f64::sin(1382.0*f64::exp(f64::log(2.0, std::f64::consts::E)*NOTES[n%8]/12.0)*i)) as i32);
+                        LittleEndian::write_i32(&mut tmp, (amplitude*wave(freq*f64::exp(f64::log(2.0, std::f64::consts::E)*NOTES[n%8]/12.0)*i)) as i32);
                         let _ = stdin.write(&tmp);
                         i += 0.0001;
                     }
@@ -63,14 +71,32 @@ fn main() {
                     //println!("{:?}", event);
                     match event {
                         glutin::WindowEvent::Closed => closed = true,
-                        glutin::WindowEvent::ReceivedCharacter('a') => play_note(0),
-                        glutin::WindowEvent::ReceivedCharacter('s') => play_note(1),
-                        glutin::WindowEvent::ReceivedCharacter('d') => play_note(2),
-                        glutin::WindowEvent::ReceivedCharacter('f') => play_note(3),
-                        glutin::WindowEvent::ReceivedCharacter('g') => play_note(4),
-                        glutin::WindowEvent::ReceivedCharacter('h') => play_note(5),
-                        glutin::WindowEvent::ReceivedCharacter('j') => play_note(6),
-                        glutin::WindowEvent::ReceivedCharacter('k') => play_note(7),
+                        glutin::WindowEvent::ReceivedCharacter('a') => play_note(0, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('s') => play_note(1, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('d') => play_note(2, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('f') => play_note(3, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('g') => play_note(4, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('h') => play_note(5, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('j') => play_note(6, 70.0, 1382.0, f64::sin),
+                        glutin::WindowEvent::ReceivedCharacter('k') => play_note(7, 70.0, 1382.0, f64::sin),
+
+                        glutin::WindowEvent::ReceivedCharacter('q') => play_note(0, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('w') => play_note(1, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('e') => play_note(2, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('r') => play_note(3, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('t') => play_note(4, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('y') => play_note(5, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('u') => play_note(6, 150.0, 700.0, square),
+                        glutin::WindowEvent::ReceivedCharacter('i') => play_note(7, 150.0, 700.0, square),
+
+                        glutin::WindowEvent::ReceivedCharacter('z') => play_note(0, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter('x') => play_note(1, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter('c') => play_note(2, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter('v') => play_note(3, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter('b') => play_note(4, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter('n') => play_note(5, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter('m') => play_note(6, 200.0, 800.0, triangle),
+                        glutin::WindowEvent::ReceivedCharacter(',') => play_note(7, 200.0, 800.0, triangle),
                         _ => (),
                     }
                 },

@@ -5,4 +5,5 @@ authors = ["Avi Weinstock <aweinstock314@gmail.com>"]
 
 [dependencies]
 byteorder = "*"
+cpal = "*"
 glium = "*"

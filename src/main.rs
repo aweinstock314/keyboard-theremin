@@ -1,9 +1,11 @@
 //echo -e '0\n1\n2\n3\n4\n5\n6\n7' | awk '{ split("0,2,4,5,7,9,11,12",a,","); for (i = 0; i < 1; i+= 0.0001) printf("%08X\n", 100*sin(1382*exp((a[$1 % 8]/12)*log(2))*i)) }' | xxd -r -p | aplay -c 2 -f S32_LE -r 16000
 extern crate byteorder;
+extern crate cpal;
 extern crate glium;
 
 use std::process::{Command, Stdio};
 use std::sync::mpsc::{channel, Sender, Receiver};
+use std::sync::{Arc, Mutex};
 use std::io::Write;
 use byteorder::{ByteOrder, LittleEndian};
 use glium::{glutin, Surface};
@@ -121,16 +123,104 @@ fn ui(s: Sender<Note<Fn(f64) -> f64 + Send, Fn(f64, f64) -> f64 + Send>>) {
         });
     }
 }
-
-fn player<F, G>(r: Receiver<Note<F, G>>) where
+fn aplay_player<F, G>(r: Receiver<Note<F, G>>) where
     F: Fn(f64) -> f64 + Send + 'static + ?Sized, G: Fn(f64, f64) -> f64 + Send + 'static + ?Sized {
     for note in r.iter() {
         play_note(note);
     }
 }
 
+fn cpal_player<F, G>(r: Receiver<Note<F, G>>) where
+    F: Fn(f64) -> f64 + Send + 'static + ?Sized, G: Fn(f64, f64) -> f64 + Send + 'static + ?Sized {
+    let endpoint = cpal::default_endpoint().expect("Failed to get default endpoint");
+    let format = endpoint
+        .supported_formats()
+        .unwrap()
+        .next()
+        .expect("Failed to get endpoint format")
+        .with_max_samples_rate();
+
+    let event_loop = cpal::EventLoop::new();
+    let voice_id = event_loop.build_voice(&endpoint, &format).unwrap();
+    event_loop.play(voice_id);
+
+    let pending_notes = Arc::new(Mutex::new(vec![]));
+    std::thread::spawn({
+        let pn = pending_notes.clone();
+        move || {
+            for note in r.iter() {
+                if let Ok(mut guard) = pn.lock() {
+                    guard.push((note, 1.0));
+                }
+            }
+        }
+    });
+
+    let samples_rate = format.samples_rate.0 as f64;
+    let mut sample_clock = 0f64;
+
+    let next_value = || {
+        sample_clock = (sample_clock + 1.0) % samples_rate;
+        if let Ok(mut guard) = pending_notes.lock() {
+            let mut v = std::mem::replace(&mut *guard, vec![]);
+            let num_samples = v.len() as f64;
+            let mut result = 0.0;
+            for (note, mut timeleft) in v.drain(..) {
+                if timeleft > 0.0 {
+                    {
+                        let Note(n, amplitude, freq, ref wave, ref lfo) = note;
+                        let i = sample_clock;
+                        result += (lfo(amplitude/200.0, i)*wave((freq*f64::exp(f64::log(2.0, std::f64::consts::E)*NOTES[n%8]/12.0)*i)/samples_rate)) / num_samples;
+                        timeleft -= 1.0/samples_rate;
+                    }
+                    guard.push((note, timeleft));
+                }
+            }
+            result as f32
+        } else {
+            0.0
+        }
+    };
+
+    fill_buffers(event_loop, format, next_value);
+}
+
+fn fill_buffers<F: FnMut() -> f32 + Send>(event_loop: cpal::EventLoop, format: cpal::Format, mut next_value: F) {
+    event_loop.run(move |_, buffer| {
+        match buffer {
+            cpal::UnknownTypeBuffer::U16(mut buffer) => {
+                for sample in buffer.chunks_mut(format.channels.len()) {
+                    let value = ((next_value() * 0.5 + 0.5) * std::u16::MAX as f32) as u16;
+                    for out in sample.iter_mut() {
+                        *out = value;
+                    }
+                }
+            },
+
+            cpal::UnknownTypeBuffer::I16(mut buffer) => {
+                for sample in buffer.chunks_mut(format.channels.len()) {
+                    let value = (next_value() * std::i16::MAX as f32) as i16;
+                    for out in sample.iter_mut() {
+                        *out = value;
+                    }
+                }
+            },
+
+            cpal::UnknownTypeBuffer::F32(mut buffer) => {
+                for sample in buffer.chunks_mut(format.channels.len()) {
+                    let value = next_value();
+                    for out in sample.iter_mut() {
+                        *out = value;
+                    }
+                }
+            },
+        }
+    });
+}
+
+
 fn main() {
     let (s,r) = channel();
-    std::thread::spawn(move || ui(s));
-    player(r);
+    std::thread::spawn(move || { ui(s); std::process::exit(0) });
+    cpal_player(r);
 }
